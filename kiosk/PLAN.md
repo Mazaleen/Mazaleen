@@ -87,8 +87,8 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 
 ### Look & feel
 - [x] Mobile-first, works on any phone browser, light and dark mode
-- [x] Red Line name and red / white / black colours
-- [ ] Logo and food photos `[?]`
+- [x] Red Line name, logo (rocket mark in the top bar, full logo on the menu) and red / white / black colours. Brand red is #D70101, taken from the logo
+- [ ] Food photos `[?]`
 - [ ] Your own domain, e.g. `order.redline.london` `[?]`
 
 ---
@@ -160,7 +160,8 @@ You can CANCEL at any point before completion.
 
 ### Decided
 - Name: **Red Line**
-- Colours: red, white and black
+- Colours: red, white and black. Brand red #D70101
+- Logo: rocket + "Red Line Delivery Service" (in `assets/`)
 - Country and currency: United Kingdom, £ (pounds sterling)
 - Based in: London
 - Payment: **cash on delivery only**
@@ -169,7 +170,7 @@ You can CANCEL at any point before completion.
 
 ### Still needed
 - [ ] Menu and prices, item options (sizes, sauces), allergens (you're sending these next)
-- [ ] Logo and food photos
+- [ ] Food photos (optional)
 - [ ] Delivery area (which London postcodes), delivery fee, minimum order
 - [ ] Opening hours
 - [ ] Customers order as guests, or create an account?
