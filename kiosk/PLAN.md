@@ -1,6 +1,6 @@
-# Food ordering & dispatch system — build plan
+# Red Line — ordering & dispatch build plan
 
-One web link you send to customers. They order, you receive a ticket, you send it to a driver,
+Red Line is a London food delivery business. One web link you send to customers. They order, you receive a ticket, you send it to a driver,
 the driver accepts with an ETA and delivers. You (moderator) control everything and the
 accounts are kept automatically.
 
@@ -30,9 +30,9 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Live notifications when the order changes (in-page in prototype)
 - [x] "Shop closed" mode blocks new orders
 - [ ] Real push notifications to the phone (PWA web push), SMS fallback
-- [ ] Payment: customers pay the driver on delivery (cash or card reader). No online payments for now
+- [x] Payment: cash to the driver on delivery. No card or online payments
 - [ ] Optional customer account: saved address, reorder, order history
-- [ ] Delivery area / postcode check and distance-based fee `[?]`
+- [ ] London delivery area / postcode check and distance-based fee `[?]`
 - [ ] Item options (sauces, sizes, extras) and allergen info
 - [ ] Opening hours schedule (auto open/close)
 - [ ] "Add to home screen" so it behaves like an app (PWA)
@@ -51,9 +51,10 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
   - Spend deals: spend £X, get £ off / % off / free delivery. Applied automatically, customers are told how much more to spend
   - Promo codes you hand out yourself
 - [x] Usage and customer savings for every deal
-- [ ] Loyalty deal: e.g. every 5th order gets £5 off (needs customer accounts or phone number matching) `[?]`
+- [ ] **Later option:** loyalty deals, e.g. every 5th order gets £5 off (matches returning customers by phone number). Shown as "coming later" in the prototype
+- [ ] **Later option:** mystery deal spin, customers win a random deal from a pool you choose. Shown as "coming later" in the prototype
 - [x] Drivers: add, on/off duty, delivery counts
-- [x] Settings: shop name, currency, delivery fee, open/closed
+- [x] Settings: shop name, delivery fee, open/closed
 - [ ] Staff accounts with permissions (owner vs staff)
 - [ ] Audit log (who changed what)
 - [ ] Refunds and partial refunds
@@ -66,7 +67,7 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Address with "open in Maps" link, customer phone
 - [x] Picked up / Delivered buttons
 - [x] Chat with the shop per order
-- [x] Today's deliveries and earnings
+- [x] Today's and all-time delivery counts
 - [x] On/off duty
 - [ ] Push notification + sound for a new ticket (must work with phone locked)
 - [ ] Driver login (phone number + code)
@@ -79,15 +80,16 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Deliveries per driver
 - [x] Deal usage and how much each deal cost you
 - [x] CSV export (copy into Excel / Google Sheets)
-- [ ] Record cash vs card each driver collected on delivery
-- [ ] Driver pay tracking (later, once you decide how drivers are paid)
+- [ ] Cash-up: cash each driver collected vs what they should have, per shift
+- [ ] Driver pay tracking (not for now)
 - [ ] Expenses entry (ingredients, fuel) for real profit
 - [ ] VAT/tax report `[?]`
 
 ### Look & feel
 - [x] Mobile-first, works on any phone browser, light and dark mode
-- [ ] Your logo, colours and food photos `[?]`
-- [ ] Your own domain, e.g. `order.yourkitchen.com` `[?]`
+- [x] Red Line name and red / white / black colours
+- [ ] Logo and food photos `[?]`
+- [ ] Your own domain, e.g. `order.redline.london` `[?]`
 
 ---
 
@@ -122,7 +124,7 @@ Capacitor.
 - **deals**: kind (meal deal, spend deal, promo code), items + price for meal deals, reward type + amount, minimum spend, code, end time, on/off
 - **drivers**: name, phone, on duty, login
 - **notifications**: who it's for, text, order, time, read
-- **settings**: shop name, currency, delivery fee, open/closed, hours
+- **settings**: shop name, delivery fee, open/closed, hours (currency fixed to £)
 
 Security: row-level rules so customers only see their own order, drivers only see orders sent
 to them, and only moderators can see everything and change settings.
@@ -148,18 +150,26 @@ You can CANCEL at any point before completion.
 1. **Prototype** (this folder) — clickable demo of all three sides. Data lives in your browser only.
 2. **Real backend** — Supabase database, logins for moderator and drivers, live updates across phones.
 3. **Notifications** — PWA install + web push for drivers and customers, sound alert for new tickets.
-4. **Cash-up** — record what each driver collected on delivery, end-of-day totals, refunds.
-5. **Accounting+** — expenses, exports, tax report (driver pay when you're ready).
-6. **Launch** — your branding, domain, real menu, test with a few customers and drivers.
+4. **Cash-up** — cash each driver collected on delivery, end-of-day totals, refunds.
+5. **Accounting+ and later deals** — expenses, exports, tax report; loyalty and mystery deals when you want them.
+6. **Launch** — logo, domain, real menu, test with a few customers and drivers in London.
 
 ---
 
-## 7. Decisions needed from you
+## 7. Decisions
 
-- [ ] Business name, logo, colours, food photos
-- [ ] Real menu and prices, item options (sizes, sauces)
-- [ ] Country / currency (prototype uses £, changeable in Settings)
-- [ ] Delivery area and fee (flat or by distance), minimum order
+### Decided
+- Name: **Red Line**
+- Colours: red, white and black
+- Country and currency: United Kingdom, £ (pounds sterling)
+- Based in: London
+- Payment: **cash on delivery only**
+- Driver pay: not tracked for now
+- Deals: meal deals, spend deals and promo codes now. Loyalty and mystery deals later as options
+
+### Still needed
+- [ ] Menu and prices, item options (sizes, sauces), allergens (you're sending these next)
+- [ ] Logo and food photos
+- [ ] Delivery area (which London postcodes), delivery fee, minimum order
 - [ ] Opening hours
-- [ ] Which deals to launch with, and whether you want loyalty deals (every Nth order)
 - [ ] Customers order as guests, or create an account?
