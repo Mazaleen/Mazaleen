@@ -1,0 +1,165 @@
+# Food ordering & dispatch system — build plan
+
+One web link you send to customers. They order, you receive a ticket, you send it to a driver,
+the driver accepts with an ETA and delivers. You (moderator) control everything and the
+accounts are kept automatically.
+
+Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision from you
+
+---
+
+## 1. Who uses it
+
+| Role | How they get in | What they do |
+|---|---|---|
+| **Customer** | The link you send (no app install, no account needed to order) | Browse menu, use deals, order, track, message the shop |
+| **Driver** | Their own driver link + login | Get tickets, accept with ETA or decline, mark picked up / delivered, message the shop |
+| **Moderator (you + staff)** | Admin link + login | See every order, dispatch to drivers, edit menu, deals, drivers, settings, accounts |
+
+---
+
+## 2. Feature checklist
+
+### Customer side
+- [x] Menu by category, sold-out items greyed out
+- [x] Basket with quantities
+- [x] Promo codes
+- [x] Mystery deal spin (random deal from a pool you control)
+- [x] Checkout: name, phone, address, comment for the shop/driver
+- [x] Order tracking page: received → being prepared → driver assigned (with ETA) → on the way → delivered
+- [x] Chat with the shop on the order
+- [x] Live notifications when the order changes (in-page in prototype)
+- [x] "Shop closed" mode blocks new orders
+- [ ] Real push notifications to the phone (PWA web push), SMS fallback
+- [ ] Online card payment (Stripe) or cash on delivery `[?]`
+- [ ] Optional customer account: saved address, reorder, order history
+- [ ] Delivery area / postcode check and distance-based fee `[?]`
+- [ ] Item options (sauces, sizes, extras) and allergen info
+- [ ] Opening hours schedule (auto open/close)
+- [ ] "Add to home screen" so it behaves like an app (PWA)
+
+### Moderator side (full control)
+- [x] Orders board with tabs: New · Sent to driver · On the way · Completed · Cancelled · All
+- [x] Ticket view: customer details, items, totals, deal used, full status history
+- [x] Send ticket to a driver with a note
+- [x] Reassign if a driver declines or doesn't respond
+- [x] Mark delivered / cancel order
+- [x] Two separate comment threads per order: customer ↔ shop and driver ↔ shop
+- [x] Notification bell + live pop-ups for new orders, accepts, declines, messages
+- [x] Menu editor: add, edit price, mark sold out, delete
+- [x] Deals: create codes (% off, fixed £ off, free delivery), minimum spend, expiry, on/off, mystery-pool flag
+- [x] One-tap "random flash deal" generator
+- [x] Drivers: add, on/off duty, delivery counts
+- [x] Settings: shop name, currency, delivery fee, driver pay per delivery, open/closed
+- [ ] Staff accounts with permissions (owner vs staff)
+- [ ] Audit log (who changed what)
+- [ ] Refunds and partial refunds
+- [ ] Print/thermal printer ticket output for the kitchen `[?]`
+- [ ] Auto-assign to nearest/free driver (later)
+
+### Driver side
+- [x] Own view showing only their tickets
+- [x] Accept with ETA (quick buttons 10/15/20/30/45 min or custom) or decline
+- [x] Address with "open in Maps" link, customer phone
+- [x] Picked up / Delivered buttons
+- [x] Chat with the shop per order
+- [x] Today's deliveries and earnings
+- [x] On/off duty
+- [ ] Push notification + sound for a new ticket (must work with phone locked)
+- [ ] Driver login (phone number + code)
+- [ ] Live GPS location shared with the shop/customer (later, optional)
+- [ ] Proof of delivery photo (later, optional)
+
+### Accounting
+- [x] Totals for Today / 7 days / 30 days / All: orders, sales, discounts, delivery fees, takings, driver pay, net
+- [x] Daily breakdown table
+- [x] Per-driver deliveries and pay owed
+- [x] Deal usage and how much each deal cost you
+- [x] CSV export (copy into Excel / Google Sheets)
+- [ ] Payment method split (card vs cash) once payments exist
+- [ ] Driver payout records (mark as paid)
+- [ ] Expenses entry (ingredients, fuel) for real profit
+- [ ] VAT/tax report `[?]`
+
+### Look & feel
+- [x] Mobile-first, works on any phone browser, light and dark mode
+- [ ] Your logo, colours and food photos `[?]`
+- [ ] Your own domain, e.g. `order.yourkitchen.com` `[?]`
+
+---
+
+## 3. Recommended tech (free to start)
+
+| Need | Tool | Cost to start |
+|---|---|---|
+| Website hosting | **Cloudflare Pages**, Netlify or Vercel | Free |
+| Database, logins, live updates | **Supabase** (Postgres + Auth + Realtime) | Free tier |
+| App feel on phones | **PWA** (installable web app, push notifications) | Free |
+| Payments | **Stripe** (pay per transaction, no monthly fee) | Only a % per card payment |
+| SMS fallback (optional) | Twilio or similar | Pay as you go, pennies per text |
+| Email receipts (optional) | Resend / Brevo free tier | Free at low volume |
+| Domain (optional) | Any registrar | About £10 a year |
+
+Realistic running cost: **£0/month** while testing and starting out. If you grow, the
+first paid upgrade is usually Supabase Pro (about $25/month). Free tiers change, so check
+current limits before launch. One catch to know: Supabase free projects pause after a week
+with no activity, so a live business will want to keep it active or upgrade.
+
+A native App Store / Play Store app isn't needed at first. A PWA can be added to the home
+screen and get notifications. If we want store apps later, the same code can be wrapped with
+Capacitor.
+
+---
+
+## 4. Data we store
+
+- **orders**: number, time, customer (name, phone, address, note), items, subtotal, discount,
+  deal code, delivery fee, total, status, driver, ETA, driver pay, status history
+- **messages**: order, thread (customer or driver), sender, text, time
+- **menu_items**: name, category, description, price, available
+- **deals**: code, type, value, minimum spend, expiry, active, mystery pool, uses
+- **drivers**: name, phone, on duty, login
+- **notifications**: who it's for, text, order, time, read
+- **settings**: shop name, currency, delivery fee, driver pay, open/closed, hours
+
+Security: row-level rules so customers only see their own order, drivers only see orders sent
+to them, and only moderators can see everything and change settings.
+
+---
+
+## 5. Order flow
+
+```
+Customer places order ──► NEW (you get a notification)
+You send ticket to driver ──► SENT TO DRIVER (driver gets a notification)
+   Driver declines ──► back to NEW, you reassign
+Driver accepts + ETA ──► ACCEPTED (you and the customer see the ETA)
+Driver collects ──► OUT FOR DELIVERY
+Driver delivers ──► COMPLETED (goes into accounts, driver pay recorded)
+You can CANCEL at any point before completion.
+```
+
+---
+
+## 6. Build phases
+
+1. **Prototype** (this folder) — clickable demo of all three sides. Data lives in your browser only.
+2. **Real backend** — Supabase database, logins for moderator and drivers, live updates across phones.
+3. **Notifications** — PWA install + web push for drivers and customers, sound alert for new tickets.
+4. **Payments** — Stripe checkout or cash on delivery, refunds.
+5. **Accounting+** — payouts, expenses, exports, tax report.
+6. **Launch** — your branding, domain, real menu, test with a few customers and drivers.
+
+---
+
+## 7. Decisions needed from you
+
+- [ ] Business name, logo, colours, food photos
+- [ ] Real menu and prices, item options (sizes, sauces)
+- [ ] Country / currency (prototype uses £, changeable in Settings)
+- [ ] Payment: card online, cash on delivery, or both
+- [ ] Delivery area and fee (flat or by distance), minimum order
+- [ ] How drivers are paid (flat per delivery, % of order, hourly)
+- [ ] Opening hours
+- [ ] How you want deals to work: codes you hand out, mystery spin, flash deals, or all three
+- [ ] Customers order as guests, or create an account?
