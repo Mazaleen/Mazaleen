@@ -288,7 +288,7 @@ function seed() {
     {id:'dl4', code:'TREAT3', type:'fixed', value:3, min:12, active:true, mystery:true, expires:null},
     {id:'dl5', code:'FRYDAY', type:'fixed', value:2, min:0, active:true, mystery:true, expires:null},
   ];
-  const st = {settings:{shop:'Your Kitchen', currency:'£', deliveryFee:2.5, driverPay:3.5, open:true}, menu, drivers, deals, orders:[], notes:[], nextNo:1001};
+  const st = {settings:{shop:'Your Kitchen', currency:'£', deliveryFee:2.5, open:true}, menu, drivers, deals, orders:[], notes:[], nextNo:1001};
   let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   const pick = a => a[Math.floor(rnd() * a.length)];
   const people = [['Aisha K.','07700 900401','14 Elm Road'],['Tom R.','07700 900402','3 Mill Lane'],['Chen L.','07700 900403','Flat 2, 27 High Street'],['Maria G.','07700 900404','88 Park Avenue'],['Dev P.','07700 900405','5 Station Road'],['Ola A.','07700 900406','61 Kings Way'],['Grace M.','07700 900407','12 Rose Court'],['Luis F.','07700 900408','40 Canal Street']];
@@ -302,7 +302,7 @@ function seed() {
     if (i === 6) { o.status = 'cancelled'; o.history.push({s:'cancelled', at:at + 6 * MIN}); }
     else {
       const eta = 10 + Math.floor(rnd() * 5) * 5;
-      Object.assign(o, {status:'delivered', driverId:drv.id, etaMin:eta, eta:at + (8 + eta) * MIN, driverPay:st.settings.driverPay});
+      Object.assign(o, {status:'delivered', driverId:drv.id, etaMin:eta, eta:at + (8 + eta) * MIN});
       o.history.push({s:'sent', at:at + 4 * MIN}, {s:'accepted', at:at + 6 * MIN}, {s:'picked', at:at + 12 * MIN}, {s:'delivered', at:at + (8 + eta) * MIN});
     }
     st.orders.push(o);
@@ -341,7 +341,7 @@ function totals(items, code, st = S) {
 function buildOrder(st, customer, items, code, at) {
   const t = totals(items, code, st);
   return {id:uid('o'), no:st.nextNo++, at, customer, items, sub:t.sub, fee:t.fee, disc:t.disc, total:t.total, deal:t.deal,
-    status:'new', driverId:null, eta:null, etaMin:null, driverNote:'', driverPay:0,
+    status:'new', driverId:null, eta:null, etaMin:null, driverNote:'',
     history:[{s:'new', at}], threads:{customer:[], driver:[]}};
 }
 
@@ -614,7 +614,7 @@ function vDrivers() {
   <div class="cards">${S.drivers.map(d => { const mine = S.orders.filter(o => o.driverId === d.id); const act = mine.filter(o => ['sent','accepted','picked'].includes(o.status)).length; const done = mine.filter(o => o.status === 'delivered'); return `<div class="card">
     <div class="row"><strong style="font-size:17px">${esc(d.name)}</strong><span class="spacer"></span><span class="small muted">${d.on ? 'On duty' : 'Off duty'}</span><button class="toggle" data-act="drvtoggle" data-id="${d.id}" aria-pressed="${d.on}" aria-label="${esc(d.name)} on duty"></button></div>
     <div class="mono small muted">${esc(d.phone)}</div>
-    <div class="small">${act} active · ${done.length} delivered · owed ${money(done.reduce((a, o) => a + (o.driverPay || 0), 0))}</div>
+    <div class="small">${act} active · ${done.length} delivered</div>
     <div><button class="btn sm" data-act="viewas" data-id="${d.id}">Open driver view</button></div></div>`; }).join('')}</div>
   <form class="panel stack" data-form="drvadd" style="margin-top:16px"><h3>Add a driver</h3>
     <div class="grid2"><label class="f">Name<input id="dra-name" name="name" required></label><label class="f">Phone<input id="dra-phone" name="phone" type="tel"></label></div>
@@ -625,7 +625,7 @@ function vAccounts() {
   const from = ranges[ui.acct][1];
   const done = S.orders.filter(o => o.status === 'delivered' && o.at >= from);
   const sum = (arr, k) => arr.reduce((a, o) => a + (o[k] || 0), 0);
-  const sales = sum(done, 'sub'), disc = sum(done, 'disc'), fees = sum(done, 'fee'), take = sum(done, 'total'), pay = sum(done, 'driverPay');
+  const sales = sum(done, 'sub'), disc = sum(done, 'disc'), fees = sum(done, 'fee'), take = sum(done, 'total');
   const days = {}; done.forEach(o => { (days[dayKey(o.at)] ||= []).push(o); });
   const dRows = Object.keys(days).sort().reverse();
   const byDrv = S.drivers.map(d => ({d, list:done.filter(o => o.driverId === d.id)})).filter(x => x.list.length);
@@ -637,18 +637,16 @@ function vAccounts() {
     <div class="kpi"><div class="l">Food sales</div><div class="v">${money(sales)}</div></div>
     <div class="kpi"><div class="l">Delivery fees</div><div class="v">${money(fees)}</div></div>
     <div class="kpi"><div class="l">Discounts</div><div class="v">${neg(disc)}</div></div>
-    <div class="kpi"><div class="l">Takings</div><div class="v">${money(take)}</div></div>
-    <div class="kpi"><div class="l">Driver pay</div><div class="v">${neg(pay)}</div></div>
-    <div class="kpi hl"><div class="l">Net after drivers</div><div class="v">${money(take - pay)}</div></div>
+    <div class="kpi hl"><div class="l">Takings</div><div class="v">${money(take)}</div></div>
     <div class="kpi"><div class="l">Average order</div><div class="v">${money(done.length ? take / done.length : 0)}</div></div>
   </div>
   <p class="muted small" style="margin:-6px 0 16px">Completed orders only. ${cancelled} cancelled in this period, not counted.</p>
   <div class="stack" style="gap:18px">
-  <div><h3 style="margin-bottom:8px">By day</h3><div class="tbl"><table><thead><tr><th>Day</th><th class="num">Orders</th><th class="num">Sales</th><th class="num">Fees</th><th class="num">Discounts</th><th class="num">Takings</th><th class="num">Driver pay</th><th class="num">Net</th></tr></thead><tbody>
-    ${dRows.length ? dRows.map(k => { const l = days[k]; const t = sum(l, 'total'), p = sum(l, 'driverPay'); return `<tr><td>${new Date(l[0].at).toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'})}</td><td class="num">${l.length}</td><td class="num">${money(sum(l, 'sub'))}</td><td class="num">${money(sum(l, 'fee'))}</td><td class="num">${neg(sum(l, 'disc'))}</td><td class="num">${money(t)}</td><td class="num">${neg(p)}</td><td class="num"><strong>${money(t - p)}</strong></td></tr>`; }).join('') : '<tr><td colspan="8" class="muted">No completed orders in this period.</td></tr>'}
+  <div><h3 style="margin-bottom:8px">By day</h3><div class="tbl"><table><thead><tr><th>Day</th><th class="num">Orders</th><th class="num">Sales</th><th class="num">Fees</th><th class="num">Discounts</th><th class="num">Takings</th></tr></thead><tbody>
+    ${dRows.length ? dRows.map(k => { const l = days[k]; const t = sum(l, 'total'); return `<tr><td>${new Date(l[0].at).toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'})}</td><td class="num">${l.length}</td><td class="num">${money(sum(l, 'sub'))}</td><td class="num">${money(sum(l, 'fee'))}</td><td class="num">${neg(sum(l, 'disc'))}</td><td class="num"><strong>${money(t)}</strong></td></tr>`; }).join('') : '<tr><td colspan="6" class="muted">No completed orders in this period.</td></tr>'}
   </tbody></table></div></div>
   <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
-    <div><h3 style="margin-bottom:8px">Driver pay owed</h3><div class="tbl"><table><thead><tr><th>Driver</th><th class="num">Deliveries</th><th class="num">Pay</th></tr></thead><tbody>${byDrv.length ? byDrv.map(x => `<tr><td>${esc(x.d.name)}</td><td class="num">${x.list.length}</td><td class="num">${money(sum(x.list, 'driverPay'))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">None yet.</td></tr>'}</tbody></table></div></div>
+    <div><h3 style="margin-bottom:8px">Deliveries by driver</h3><div class="tbl"><table><thead><tr><th>Driver</th><th class="num">Deliveries</th><th class="num">Order value</th></tr></thead><tbody>${byDrv.length ? byDrv.map(x => `<tr><td>${esc(x.d.name)}</td><td class="num">${x.list.length}</td><td class="num">${money(sum(x.list, 'total'))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">None yet.</td></tr>'}</tbody></table></div></div>
     <div><h3 style="margin-bottom:8px">Deals used</h3><div class="tbl"><table><thead><tr><th>Code</th><th class="num">Uses</th><th class="num">Cost</th></tr></thead><tbody>${Object.keys(byDeal).length ? Object.entries(byDeal).map(([c, l]) => `<tr><td class="mono">${esc(c)}</td><td class="num">${l.length}</td><td class="num">${money(sum(l, 'disc'))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">No deals used.</td></tr>'}</tbody></table></div></div>
   </div>
   <div class="panel stack"><div class="row"><h3>Export</h3><span class="spacer"></span><button class="btn sm" data-act="csv">${ui.csv ? 'Hide' : 'Show'} CSV</button>${ui.csv ? '<button class="btn sm primary" data-act="copycsv">Copy</button>' : ''}</div>
@@ -658,8 +656,8 @@ function vAccounts() {
 function dayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
 function csv(list) {
   const q = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
-  const rows = [['order','date','time','customer','address','items','subtotal','delivery_fee','discount','deal','total','driver','driver_pay','eta_min']];
-  list.forEach(o => rows.push([o.no, dayKey(o.at), hhmm(o.at), o.customer.name, o.customer.address, o.items.map(i => i.qty + 'x ' + i.name).join('; '), o.sub.toFixed(2), o.fee.toFixed(2), o.disc.toFixed(2), o.deal || '', o.total.toFixed(2), driver(o.driverId)?.name || '', (o.driverPay || 0).toFixed(2), o.etaMin || '']));
+  const rows = [['order','date','time','customer','address','items','subtotal','delivery_fee','discount','deal','total','driver','eta_min']];
+  list.forEach(o => rows.push([o.no, dayKey(o.at), hhmm(o.at), o.customer.name, o.customer.address, o.items.map(i => i.qty + 'x ' + i.name).join('; '), o.sub.toFixed(2), o.fee.toFixed(2), o.disc.toFixed(2), o.deal || '', o.total.toFixed(2), driver(o.driverId)?.name || '', o.etaMin || '']));
   return rows.map(r => r.map(q).join(',')).join('\n');
 }
 function vSettings() {
@@ -671,7 +669,6 @@ function vSettings() {
     <label class="f">Shop name<input id="st-shop" name="shop" value="${esc(s.shop)}"></label>
     <label class="f">Currency symbol<input id="st-cur" name="currency" value="${esc(s.currency)}" maxlength="3"></label>
     <label class="f">Delivery fee<input id="st-fee" name="deliveryFee" type="number" step="0.05" min="0" value="${s.deliveryFee}"></label>
-    <label class="f">Driver pay per delivery<input id="st-pay" name="driverPay" type="number" step="0.05" min="0" value="${s.driverPay}"></label>
   </div><div><button class="btn primary">Save settings</button></div></form>
   <div class="panel stack"><strong>Links to share</strong>
     <p class="small muted">In the real app each of these is its own address and drivers and moderators log in. In this prototype, add the word after # to this page's link to open that view.</p>
@@ -695,7 +692,7 @@ function vDriver() {
     <div class="row"><div class="stack" style="gap:2px"><span class="eyebrow">Driver</span><h1>${esc(me.name)}</h1></div><span class="spacer"></span>
       <label class="f" style="min-width:150px">Signed in as<select id="drv-as" data-change="driveras">${S.drivers.map(d => `<option value="${d.id}" ${d.id === me.id ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label></div>
     <div class="panel row"><strong>${me.on ? 'On duty' : 'Off duty'}</strong><span class="muted small">${me.on ? 'You can receive new tickets.' : 'The shop won\'t send you tickets.'}</span><span class="spacer"></span><button class="toggle" data-act="drvtoggle" data-id="${me.id}" aria-pressed="${me.on}" aria-label="On duty"></button></div>
-    <div class="kpis" style="margin:0"><div class="kpi"><div class="l">Today</div><div class="v">${today.length} ${today.length === 1 ? 'drop' : 'drops'}</div></div><div class="kpi"><div class="l">Earned today</div><div class="v">${money(today.reduce((a, o) => a + (o.driverPay || 0), 0))}</div></div><div class="kpi"><div class="l">All time</div><div class="v">${money(allDone.reduce((a, o) => a + (o.driverPay || 0), 0))}</div></div></div>
+    <div class="kpis" style="margin:0"><div class="kpi"><div class="l">Today</div><div class="v">${today.length} ${today.length === 1 ? 'drop' : 'drops'}</div></div><div class="kpi"><div class="l">All time</div><div class="v">${allDone.length} ${allDone.length === 1 ? 'drop' : 'drops'}</div></div></div>
 
     <section class="stack"><h2>New tickets ${offers.length ? `<span class="pill s-sent">${offers.length}</span>` : ''}</h2>
     ${offers.length ? offers.map(o => `<form class="panel stack job offer" data-form="accept" data-id="${o.id}">
@@ -719,7 +716,7 @@ function vDriver() {
       <div><div class="eyebrow" style="margin-bottom:6px">Messages with the shop</div>${vThread(o, 'driver', 'driver')}</div>
     </div>`).join('') : '<div class="empty">No active deliveries.</div>'}</section>
 
-    ${today.length ? `<section class="stack"><h2>Completed today</h2><div class="tbl"><table><tbody>${today.map(o => `<tr><td class="mono">#${o.no}</td><td>${esc(o.customer.address)}</td><td class="num">${money(o.driverPay || 0)}</td></tr>`).join('')}</tbody></table></div></section>` : ''}
+    ${today.length ? `<section class="stack"><h2>Completed today</h2><div class="tbl"><table><tbody>${today.map(o => `<tr><td class="mono">#${o.no}</td><td>${esc(o.customer.address)}</td><td class="num">${hhmm(o.history.filter(h => h.s === 'delivered').pop().at)}</td></tr>`).join('')}</tbody></table></div></section>` : ''}
   </div>`;
 }
 
@@ -729,7 +726,6 @@ function setStatus(o, s, by) {
   const d = driver(o.driverId);
   if (s === 'picked') notify('order:' + o.id, `Your order #${o.no} is on the way`, o.id);
   if (s === 'delivered') {
-    o.driverPay = +S.settings.driverPay;
     notify('order:' + o.id, `Order #${o.no} delivered. Enjoy your food!`, o.id);
     if (L.role !== 'mod') notify('mod', `#${o.no} delivered${d ? ' by ' + d.name : ''}`, o.id);
     if (L.role !== 'driver' && d) notify('driver:' + d.id, `#${o.no} marked completed by the shop`, o.id);
@@ -843,7 +839,7 @@ const FORM = {
     clearIds.push('da-code', 'da-val', 'da-min', 'da-exp', 'da-myst');
   },
   drvadd: f => { S.drivers.push({id:uid('dr'), name:f.name.value.trim(), phone:f.phone.value.trim(), on:true}); clearIds.push('dra-name', 'dra-phone'); },
-  settings: f => { Object.assign(S.settings, {shop:f.shop.value.trim() || 'Your Kitchen', currency:f.currency.value, deliveryFee:+f.deliveryFee.value || 0, driverPay:+f.driverPay.value || 0}); toast('Settings saved', 'Settings'); },
+  settings: f => { Object.assign(S.settings, {shop:f.shop.value.trim() || 'Your Kitchen', currency:f.currency.value, deliveryFee:+f.deliveryFee.value || 0}); toast('Settings saved', 'Settings'); },
 };
 
 document.addEventListener('click', e => {

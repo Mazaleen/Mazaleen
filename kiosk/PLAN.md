@@ -31,7 +31,7 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Live notifications when the order changes (in-page in prototype)
 - [x] "Shop closed" mode blocks new orders
 - [ ] Real push notifications to the phone (PWA web push), SMS fallback
-- [ ] Online card payment (Stripe) or cash on delivery `[?]`
+- [ ] Payment: customers pay the driver on delivery (cash or card reader). No online payments for now
 - [ ] Optional customer account: saved address, reorder, order history
 - [ ] Delivery area / postcode check and distance-based fee `[?]`
 - [ ] Item options (sauces, sizes, extras) and allergen info
@@ -50,7 +50,7 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Deals: create codes (% off, fixed £ off, free delivery), minimum spend, expiry, on/off, mystery-pool flag
 - [x] One-tap "random flash deal" generator
 - [x] Drivers: add, on/off duty, delivery counts
-- [x] Settings: shop name, currency, delivery fee, driver pay per delivery, open/closed
+- [x] Settings: shop name, currency, delivery fee, open/closed
 - [ ] Staff accounts with permissions (owner vs staff)
 - [ ] Audit log (who changed what)
 - [ ] Refunds and partial refunds
@@ -71,13 +71,13 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [ ] Proof of delivery photo (later, optional)
 
 ### Accounting
-- [x] Totals for Today / 7 days / 30 days / All: orders, sales, discounts, delivery fees, takings, driver pay, net
+- [x] Totals for Today / 7 days / 30 days / All: orders, sales, discounts, delivery fees, takings, average order
 - [x] Daily breakdown table
-- [x] Per-driver deliveries and pay owed
+- [x] Deliveries per driver
 - [x] Deal usage and how much each deal cost you
 - [x] CSV export (copy into Excel / Google Sheets)
-- [ ] Payment method split (card vs cash) once payments exist
-- [ ] Driver payout records (mark as paid)
+- [ ] Record cash vs card each driver collected on delivery
+- [ ] Driver pay tracking (later, once you decide how drivers are paid)
 - [ ] Expenses entry (ingredients, fuel) for real profit
 - [ ] VAT/tax report `[?]`
 
@@ -95,7 +95,6 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 | Website hosting | **Cloudflare Pages**, Netlify or Vercel | Free |
 | Database, logins, live updates | **Supabase** (Postgres + Auth + Realtime) | Free tier |
 | App feel on phones | **PWA** (installable web app, push notifications) | Free |
-| Payments | **Stripe** (pay per transaction, no monthly fee) | Only a % per card payment |
 | SMS fallback (optional) | Twilio or similar | Pay as you go, pennies per text |
 | Email receipts (optional) | Resend / Brevo free tier | Free at low volume |
 | Domain (optional) | Any registrar | About £10 a year |
@@ -114,13 +113,13 @@ Capacitor.
 ## 4. Data we store
 
 - **orders**: number, time, customer (name, phone, address, note), items, subtotal, discount,
-  deal code, delivery fee, total, status, driver, ETA, driver pay, status history
+  deal code, delivery fee, total, status, driver, ETA, status history
 - **messages**: order, thread (customer or driver), sender, text, time
 - **menu_items**: name, category, description, price, available
 - **deals**: code, type, value, minimum spend, expiry, active, mystery pool, uses
 - **drivers**: name, phone, on duty, login
 - **notifications**: who it's for, text, order, time, read
-- **settings**: shop name, currency, delivery fee, driver pay, open/closed, hours
+- **settings**: shop name, currency, delivery fee, open/closed, hours
 
 Security: row-level rules so customers only see their own order, drivers only see orders sent
 to them, and only moderators can see everything and change settings.
@@ -135,7 +134,7 @@ You send ticket to driver ──► SENT TO DRIVER (driver gets a notification)
    Driver declines ──► back to NEW, you reassign
 Driver accepts + ETA ──► ACCEPTED (you and the customer see the ETA)
 Driver collects ──► OUT FOR DELIVERY
-Driver delivers ──► COMPLETED (goes into accounts, driver pay recorded)
+Driver delivers ──► COMPLETED (goes into accounts)
 You can CANCEL at any point before completion.
 ```
 
@@ -146,8 +145,8 @@ You can CANCEL at any point before completion.
 1. **Prototype** (this folder) — clickable demo of all three sides. Data lives in your browser only.
 2. **Real backend** — Supabase database, logins for moderator and drivers, live updates across phones.
 3. **Notifications** — PWA install + web push for drivers and customers, sound alert for new tickets.
-4. **Payments** — Stripe checkout or cash on delivery, refunds.
-5. **Accounting+** — payouts, expenses, exports, tax report.
+4. **Cash-up** — record what each driver collected on delivery, end-of-day totals, refunds.
+5. **Accounting+** — expenses, exports, tax report (driver pay when you're ready).
 6. **Launch** — your branding, domain, real menu, test with a few customers and drivers.
 
 ---
@@ -157,9 +156,7 @@ You can CANCEL at any point before completion.
 - [ ] Business name, logo, colours, food photos
 - [ ] Real menu and prices, item options (sizes, sauces)
 - [ ] Country / currency (prototype uses £, changeable in Settings)
-- [ ] Payment: card online, cash on delivery, or both
 - [ ] Delivery area and fee (flat or by distance), minimum order
-- [ ] How drivers are paid (flat per delivery, % of order, hourly)
 - [ ] Opening hours
 - [ ] How you want deals to work: codes you hand out, mystery spin, flash deals, or all three
 - [ ] Customers order as guests, or create an account?
