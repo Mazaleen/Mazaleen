@@ -23,8 +23,7 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 ### Customer side
 - [x] Menu by category, sold-out items greyed out
 - [x] Basket with quantities
-- [x] Promo codes
-- [x] Mystery deal spin (random deal from a pool you control)
+- [x] Meal deals at the top of the menu, spend deals applied automatically, promo codes
 - [x] Checkout: name, phone, address, comment for the shop/driver
 - [x] Order tracking page: received → being prepared → driver assigned (with ETA) → on the way → delivered
 - [x] Chat with the shop on the order
@@ -47,8 +46,12 @@ Status key: `[x]` done in prototype · `[ ]` to build · `[?]` needs a decision 
 - [x] Two separate comment threads per order: customer ↔ shop and driver ↔ shop
 - [x] Notification bell + live pop-ups for new orders, accepts, declines, messages
 - [x] Menu editor: add, edit price, mark sold out, delete
-- [x] Deals: create codes (% off, fixed £ off, free delivery), minimum spend, expiry, on/off, mystery-pool flag
-- [x] One-tap "random flash deal" generator
+- [x] Deals you switch on and off whenever you like (optional end time):
+  - Meal deals: pick items and quantities, set one price (e.g. 2× wings + fries for £17). Shown at the top of the menu
+  - Spend deals: spend £X, get £ off / % off / free delivery. Applied automatically, customers are told how much more to spend
+  - Promo codes you hand out yourself
+- [x] Usage and customer savings for every deal
+- [ ] Loyalty deal: e.g. every 5th order gets £5 off (needs customer accounts or phone number matching) `[?]`
 - [x] Drivers: add, on/off duty, delivery counts
 - [x] Settings: shop name, currency, delivery fee, open/closed
 - [ ] Staff accounts with permissions (owner vs staff)
@@ -116,7 +119,7 @@ Capacitor.
   deal code, delivery fee, total, status, driver, ETA, status history
 - **messages**: order, thread (customer or driver), sender, text, time
 - **menu_items**: name, category, description, price, available
-- **deals**: code, type, value, minimum spend, expiry, active, mystery pool, uses
+- **deals**: kind (meal deal, spend deal, promo code), items + price for meal deals, reward type + amount, minimum spend, code, end time, on/off
 - **drivers**: name, phone, on duty, login
 - **notifications**: who it's for, text, order, time, read
 - **settings**: shop name, currency, delivery fee, open/closed, hours
@@ -158,5 +161,5 @@ You can CANCEL at any point before completion.
 - [ ] Country / currency (prototype uses £, changeable in Settings)
 - [ ] Delivery area and fee (flat or by distance), minimum order
 - [ ] Opening hours
-- [ ] How you want deals to work: codes you hand out, mystery spin, flash deals, or all three
+- [ ] Which deals to launch with, and whether you want loyalty deals (every Nth order)
 - [ ] Customers order as guests, or create an account?

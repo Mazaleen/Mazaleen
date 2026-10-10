@@ -131,7 +131,12 @@ textarea{resize:vertical;min-height:64px}
 .totals{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px}
 .totals .grand{font-size:18px;font-weight:700;padding-top:6px;border-top:1px solid var(--line);margin-top:4px}
 .totals .disc{color:var(--ok)}
-.spin{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font:700 18px var(--font-mono);letter-spacing:.06em}
+.item.deal{border:1.5px solid var(--accent)}
+.save{color:var(--ok);font-weight:700;font-size:13px}
+.save s{color:var(--muted);font-weight:500;margin-left:4px}
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+.pickrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 6px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--surface)}
+.pickrow input{width:72px;flex:none}
 .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .step{display:grid;grid-template-columns:24px 1fr;gap:12px;position:relative;padding-bottom:18px}
 .step:last-child{padding-bottom:0}
@@ -244,7 +249,7 @@ textarea.csv{font:12px/1.5 var(--font-mono);min-height:160px}
 
 <script>
 (() => {
-const KEY = 'kitchen-kiosk-proto-v1', LOCAL = 'kitchen-kiosk-local-v1';
+const KEY = 'kitchen-kiosk-proto-v2', LOCAL = 'kitchen-kiosk-local-v1';
 const MIN = 60000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 const now = () => Date.now();
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -282,19 +287,19 @@ function seed() {
     {id:'dr3', name:'Jordan', phone:'07700 900333', on:false},
   ];
   const deals = [
-    {id:'dl1', code:'WELCOME10', type:'percent', value:10, min:0, active:true, mystery:false, expires:null},
-    {id:'dl2', code:'FREEDEL', type:'freedelivery', value:0, min:20, active:true, mystery:false, expires:null},
-    {id:'dl3', code:'LUCKY15', type:'percent', value:15, min:0, active:true, mystery:true, expires:null},
-    {id:'dl4', code:'TREAT3', type:'fixed', value:3, min:12, active:true, mystery:true, expires:null},
-    {id:'dl5', code:'FRYDAY', type:'fixed', value:2, min:0, active:true, mystery:true, expires:null},
+    {id:'dl1', kind:'bundle', name:'Burger meal', items:[{id:'m1', qty:1}, {id:'s2', qty:1}, {id:'d1', qty:1}], price:11.5, active:true, expires:null},
+    {id:'dl2', kind:'bundle', name:'Wing feast for two', items:[{id:'m3', qty:2}, {id:'s1', qty:1}, {id:'d2', qty:2}], price:20, active:true, expires:null},
+    {id:'dl3', kind:'spend', type:'freedelivery', value:0, min:15, active:true, expires:null},
+    {id:'dl4', kind:'spend', type:'fixed', value:5, min:30, active:true, expires:null},
+    {id:'dl5', kind:'code', code:'WELCOME10', type:'percent', value:10, min:0, active:true, expires:null},
   ];
   const st = {settings:{shop:'Your Kitchen', currency:'£', deliveryFee:2.5, open:true}, menu, drivers, deals, orders:[], notes:[], nextNo:1001};
   let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   const pick = a => a[Math.floor(rnd() * a.length)];
   const people = [['Aisha K.','07700 900401','14 Elm Road'],['Tom R.','07700 900402','3 Mill Lane'],['Chen L.','07700 900403','Flat 2, 27 High Street'],['Maria G.','07700 900404','88 Park Avenue'],['Dev P.','07700 900405','5 Station Road'],['Ola A.','07700 900406','61 Kings Way'],['Grace M.','07700 900407','12 Rose Court'],['Luis F.','07700 900408','40 Canal Street']];
   const live = menu.filter(m => m.on);
-  const mkItems = () => { const n = 1 + Math.floor(rnd() * 3), out = {}; for (let i = 0; i < n; i++) { const m = pick(live); out[m.id] = (out[m.id] || 0) + 1 + (rnd() < .2 ? 1 : 0); } return Object.entries(out).map(([id, qty]) => { const m = menu.find(x => x.id === id); return {id, name:m.name, price:m.price, qty}; }); };
-  const codes = [null, null, null, 'WELCOME10', 'LUCKY15', 'TREAT3', null, 'FREEDEL'];
+  const mkItems = () => { const n = 1 + Math.floor(rnd() * 3), out = {}; for (let i = 0; i < n; i++) { const m = pick(live); out[m.id] = (out[m.id] || 0) + 1 + (rnd() < .2 ? 1 : 0); } const lines = Object.entries(out).map(([id, qty]) => { const m = menu.find(x => x.id === id); return {id, name:m.name, price:m.price, qty}; }); if (rnd() < .35) lines.unshift(bundleLine(pick(deals.filter(d => d.kind === 'bundle')), 1, menu)); return lines; };
+  const codes = [null, null, null, 'WELCOME10'];
   for (let i = 15; i >= 0; i--) {
     const at = now() - (3 + i * 7.3) * HOUR;
     const p = pick(people), drv = pick(drivers.slice(0, 2));
@@ -316,40 +321,55 @@ function seed() {
   const b = buildOrder(st, {name:'Hana S.', phone:'07700 900410', address:'Unit 4, 2 Quay Street', note:''}, [{id:'m1',name:'Double smash burger',price:9.5,qty:1},{id:'s2',name:'Skin-on fries',price:2.75,qty:1}], null, now() - 12 * MIN);
   Object.assign(b, {status:'sent', driverId:'dr1', driverNote:'Office building, use side door.'});
   b.history.push({s:'sent', at:now() - 4 * MIN});
-  const c = buildOrder(st, {name:'Marcus O.', phone:'07700 900411', address:'22 Orchard Rise', note:'No onions on anything please.'}, [{id:'m4',name:'Halloumi veggie bowl',price:8.5,qty:1},{id:'m2',name:'Crispy chicken wrap',price:8,qty:1},{id:'x1',name:'Salted caramel brownie',price:3.5,qty:2}], 'FREEDEL', now() - 3 * MIN);
+  const c = buildOrder(st, {name:'Marcus O.', phone:'07700 900411', address:'22 Orchard Rise', note:'No onions on anything please.'}, [{id:'m4',name:'Halloumi veggie bowl',price:8.5,qty:1},{id:'m2',name:'Crispy chicken wrap',price:8,qty:1},{id:'x1',name:'Salted caramel brownie',price:3.5,qty:2}], null, now() - 3 * MIN);
   st.orders.push(a, b, c);
   st.notes.push({id:uid('n'), at:c.at, to:'mod', text:`New order #${c.no} from ${c.customer.name}`, order:c.id});
   return st;
 }
 
 /* ---------- money & deals ---------- */
-const money = n => (S.settings.currency || '') + (Math.round(n * 100) / 100).toFixed(2);
+const money = n => (S ? S.settings.currency || '' : '£') + (Math.round(n * 100) / 100).toFixed(2);
 const neg = n => n > 0.004 ? '−' + money(n) : '—';
+const cap = t => t[0].toUpperCase() + t.slice(1);
 const dealLive = d => d && d.active && (!d.expires || d.expires > now());
-const dealText = d => (d.type === 'percent' ? `${d.value}% off` : d.type === 'fixed' ? `${money(d.value)} off` : 'Free delivery') + (d.min > 0 ? ` over ${money(d.min)}` : '');
+const reward = d => d.type === 'percent' ? `${d.value}% off` : d.type === 'fixed' ? `${money(d.value)} off` : 'free delivery';
+const contents = (d, menu = S.menu) => d.items.map(x => `${x.qty}× ${menu.find(m => m.id === x.id)?.name || 'removed item'}`).join(' + ');
+const regular = (d, menu = S.menu) => d.items.reduce((a, x) => a + (menu.find(m => m.id === x.id)?.price || 0) * x.qty, 0);
+const bundleOk = d => dealLive(d) && d.items.every(x => S.menu.find(m => m.id === x.id)?.on);
+const dealTitle = d => d.kind === 'bundle' ? d.name : d.kind === 'spend' ? `Spend ${money(d.min)}, get ${reward(d)}` : d.code;
+const dealDetail = d => d.kind === 'bundle' ? `${contents(d)} for ${money(d.price)}` : d.kind === 'code' ? cap(reward(d)) + (d.min > 0 ? ` when you spend ${money(d.min)}` : '') : 'Added automatically at checkout';
+const until = d => d.expires ? ` · until ${hhmm(d.expires)}` : '';
+function bundleLine(d, qty, menu = S.menu) { const reg = regular(d, menu); return {id:'b:' + d.id, name:d.name, contents:contents(d, menu), price:d.price, qty, bundle:true, save:Math.max(0, Math.round((reg - d.price) * 100) / 100)}; }
+const dealValue = (d, sub, fee) => d.type === 'percent' ? sub * d.value / 100 : d.type === 'fixed' ? d.value : fee;
+// One money-off deal per order: the best of any live spend deal the basket qualifies for and the promo code entered.
+// Meal deals are separate: their saving is already in the bundle price.
 function totals(items, code, st = S) {
   const sub = items.reduce((a, i) => a + i.price * i.qty, 0);
   const fee = items.length ? +st.settings.deliveryFee : 0;
-  const d = code ? st.deals.find(x => x.code === code) : null;
-  let disc = 0;
-  if (d && sub > 0 && sub >= (d.min || 0) && dealLive(d)) {
-    disc = d.type === 'percent' ? sub * d.value / 100 : d.type === 'fixed' ? d.value : fee;
-  }
-  disc = Math.min(disc, sub + fee);
-  return {sub, fee, disc:Math.round(disc * 100) / 100, total:Math.round((sub + fee - disc) * 100) / 100, deal:disc > 0 ? code : null, shortBy:d && sub < d.min ? d.min - sub : 0};
+  const cd = code ? st.deals.find(x => x.kind === 'code' && x.code === code) : null;
+  const options = st.deals.filter(d => d.kind === 'spend' && dealLive(d));
+  if (dealLive(cd)) options.push(cd);
+  let best = null, disc = 0;
+  options.filter(d => sub > 0 && sub >= (d.min || 0)).forEach(d => { const v = Math.min(dealValue(d, sub, fee), sub + fee); if (v > disc) { disc = v; best = d; } });
+  disc = Math.round(disc * 100) / 100;
+  const next = st.deals.filter(d => d.kind === 'spend' && dealLive(d) && sub > 0 && sub < d.min && (!best || d.min > (best.min || 0))).sort((a, b) => a.min - b.min)[0];
+  return {sub, fee, disc, total:Math.round((sub + fee - disc) * 100) / 100, best, deal:best ? (best.kind === 'code' ? best.code : dealTitle(best)) : null,
+    codeShort:cd && sub < cd.min ? cd.min - sub : 0, next, save:items.reduce((a, i) => a + (i.save || 0) * i.qty, 0)};
 }
 function buildOrder(st, customer, items, code, at) {
   const t = totals(items, code, st);
-  return {id:uid('o'), no:st.nextNo++, at, customer, items, sub:t.sub, fee:t.fee, disc:t.disc, total:t.total, deal:t.deal,
+  return {id:uid('o'), no:st.nextNo++, at, customer, items, sub:t.sub, fee:t.fee, disc:t.disc, total:t.total, deal:t.deal, dealId:t.best?.id || null, save:t.save,
     status:'new', driverId:null, eta:null, etaMin:null, driverNote:'',
     history:[{s:'new', at}], threads:{customer:[], driver:[]}};
 }
+const iname = i => esc(i.name) + (i.contents ? `<div class="muted small">${esc(i.contents)}</div>` : '');
 
 /* ---------- state ---------- */
-let S = lsGet(KEY) || seed();
+let S = null;
+S = lsGet(KEY) || seed();
 const L = Object.assign({role:'customer', driverId:'dr1', myOrders:[], read:{}}, lsGet(LOCAL) || {});
-const ui = {cv:'menu', trackId:null, cart:{}, code:null, codeErr:'', spinning:null, spun:false, checkoutErr:'',
-  modTab:'orders', filter:'new', open:null, thread:'customer', confirmCancel:false, confirmReset:false, acct:'7d', csv:false, showNotes:false, flash:''};
+const ui = {cv:'menu', trackId:null, cart:{}, code:null, codeErr:'', checkoutErr:'', dealKind:'bundle',
+  modTab:'orders', filter:'new', open:null, thread:'customer', confirmCancel:false, confirmReset:false, acct:'7d', csv:false, showNotes:false};
 const h = location.hash.replace('#', '');
 if (['order','customer'].includes(h)) L.role = 'customer';
 if (h === 'driver') L.role = 'driver';
@@ -421,13 +441,20 @@ function vTop() {
 }
 
 /* ---------- customer ---------- */
-function cartItems() { return Object.entries(ui.cart).filter(([, q]) => q > 0).map(([id, qty]) => { const m = S.menu.find(x => x.id === id); return m ? {id, name:m.name, price:m.price, qty} : null; }).filter(Boolean); }
+function cartItems() {
+  return Object.entries(ui.cart).filter(([, q]) => q > 0).map(([id, qty]) => {
+    if (id.startsWith('b:')) { const d = S.deals.find(x => x.id === id.slice(2)); return d && bundleOk(d) ? bundleLine(d, qty) : null; }
+    const m = S.menu.find(x => x.id === id); return m && m.on ? {id, name:m.name, price:m.price, qty} : null;
+  }).filter(Boolean);
+}
 const stepper = (id, q) => `<span class="stepper"><button data-act="dec" data-id="${id}" aria-label="Remove one">−</button><span>${q}</span><button data-act="inc" data-id="${id}" aria-label="Add one">+</button></span>`;
 
 function vCustomer() {
   if (ui.cv === 'track' && order(ui.trackId)) return vTrack(order(ui.trackId));
   const st = S.settings, cats = [...new Set(S.menu.map(m => m.cat))];
-  const public_ = S.deals.filter(d => dealLive(d) && !d.mystery);
+  const bundles = S.deals.filter(d => d.kind === 'bundle' && bundleOk(d));
+  const spends = S.deals.filter(d => d.kind === 'spend' && dealLive(d)).sort((a, b) => a.min - b.min);
+  const hasDeals = bundles.length || spends.length;
   const mine = L.myOrders.map(order).filter(o => o && !['delivered','cancelled'].includes(o.status));
   const items = cartItems(), t = totals(items, ui.code);
   return `
@@ -438,8 +465,13 @@ function vCustomer() {
     <p class="muted">Pick your food, pay on delivery, and follow your driver here. Delivery ${money(st.deliveryFee)}.</p>
   </div>${L.myOrders.length ? `<button class="btn" data-act="myorders">Past orders</button>` : ''}</section>
   ${ui.cv === 'past' ? vPast() : ''}
-  ${public_.length ? `<div class="dealstrip">${public_.map(d => `<div class="deal-chip"><b>${esc(d.code)}</b><span>${esc(dealText(d))}</span></div>`).join('')}${S.deals.some(d => dealLive(d) && d.mystery) ? `<div class="deal-chip"><b>MYSTERY</b><span>Spin for a surprise deal at checkout</span></div>` : ''}</div>` : ''}
-  <nav class="catnav" aria-label="Menu sections">${cats.map(c => `<button data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</nav>
+  <nav class="catnav" aria-label="Menu sections">${hasDeals ? '<button data-act="cat" data-v="Deals">Deals</button>' : ''}${cats.map(c => `<button data-act="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</nav>
+  ${hasDeals ? `<h2 class="cat-h" id="cat-Deals">Deals</h2>
+  ${spends.length ? `<div class="dealstrip">${spends.map(d => `<div class="deal-chip"><b>SPEND ${money(d.min)}</b><span>Get ${reward(d)}${until(d)}</span></div>`).join('')}</div>` : ''}
+  ${bundles.length ? `<div class="menu-grid">${bundles.map(d => { const id = 'b:' + d.id, q = ui.cart[id] || 0, reg = regular(d); return `<article class="item deal">
+    <div class="row" style="gap:6px"><span class="tag">Meal deal</span>${d.expires ? `<span class="muted small">Until ${hhmm(d.expires)}</span>` : ''}</div>
+    <div class="item-top"><h3>${esc(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${esc(contents(d))}</p>
+    <div class="item-act" style="justify-content:space-between;align-items:center">${reg > d.price ? `<span class="save">Save ${money(reg - d.price)}<s>${money(reg)}</s></span>` : '<span></span>'}${q ? stepper(id, q) : `<button class="btn sm primary" data-act="inc" data-id="${id}">Add</button>`}</div></article>`; }).join('')}</div>` : ''}` : ''}
   ${cats.map(c => `<h2 class="cat-h" id="cat-${esc(c).replace(/\W/g, '')}">${esc(c)}</h2><div class="menu-grid">${S.menu.filter(m => m.cat === c).map(m => {
     const q = ui.cart[m.id] || 0;
     return `<article class="item ${m.on ? '' : 'off'}"><div class="item-top"><h3>${esc(m.name)}</h3><span class="price">${money(m.price)}</span></div><p>${esc(m.desc)}</p>
@@ -456,23 +488,23 @@ function vPast() {
 }
 
 function vBasket(items, t) {
-  const pool = S.deals.filter(d => dealLive(d) && d.mystery);
   const st = S.settings;
   return `<div class="sheet-bg" data-act="menu"><div class="sheet" data-act="noop" role="dialog" aria-label="Your basket">
     <div class="sheet-h"><h2>Your basket</h2><span class="spacer"></span><button class="x" data-act="menu" aria-label="Close">${ICON.x}</button></div>
-    ${items.length ? `<div class="panel lines">${items.map(i => `<div class="line"><div class="nm"><div>${esc(i.name)}</div><div class="muted small mono">${money(i.price)}</div></div>${stepper(i.id, i.qty)}<span class="mono" style="min-width:64px;text-align:right">${money(i.price * i.qty)}</span></div>`).join('')}</div>` : '<div class="empty">Your basket is empty.</div>'}
+    ${items.length ? `<div class="panel lines">${items.map(i => `<div class="line"><div class="nm"><div>${iname(i)}</div><div class="muted small mono">${money(i.price)}</div></div>${stepper(i.id, i.qty)}<span class="mono" style="min-width:64px;text-align:right">${money(i.price * i.qty)}</span></div>`).join('')}</div>` : '<div class="empty">Your basket is empty.</div>'}
     <div class="panel stack">
       <h3>Deals</h3>
-      ${ui.code ? `<div class="row"><span class="tag">${esc(ui.code)}</span><span class="small">${t.deal ? 'Saving ' + money(t.disc) : `Add ${money(t.shortBy)} more to use this code`}</span><span class="spacer"></span><button class="btn sm ghost" data-act="dropcode">Remove</button></div>` : `
+      ${t.best && t.best.kind === 'spend' ? `<div class="row"><span class="pill s-delivered">Applied</span><span class="small">${esc(dealTitle(t.best))}</span></div>` : ''}
+      ${t.next ? `<div class="small">Add <strong class="mono">${money(t.next.min - t.sub)}</strong> more to get ${reward(t.next)}.</div>` : ''}
+      ${t.save ? `<div class="small">Meal deals are saving you <strong class="mono">${money(t.save)}</strong>.</div>` : ''}
+      ${ui.code ? `<div class="row"><span class="tag">${esc(ui.code)}</span><span class="small">${t.best && t.best.kind === 'code' ? 'Saving ' + money(t.disc) : t.codeShort ? `Add ${money(t.codeShort)} more to use this code` : 'A better deal is already applied'}</span><span class="spacer"></span><button class="btn sm ghost" data-act="dropcode">Remove</button></div>` : `
       <form class="chatform" data-form="code" style="margin:0"><input id="promo" name="code" placeholder="Promo code" autocomplete="off" style="text-transform:uppercase"><button class="btn">Apply</button></form>
-      ${ui.codeErr ? `<div class="err">${esc(ui.codeErr)}</div>` : ''}
-      ${pool.length && !ui.spun ? `<button class="btn block" data-act="spin">Spin for a mystery deal</button>` : ''}`}
-      ${ui.spinning ? `<div class="spin" aria-live="polite">${esc(ui.spinning)}</div>` : ''}
+      ${ui.codeErr ? `<div class="err">${esc(ui.codeErr)}</div>` : ''}`}
     </div>
     <div class="panel totals">
       <span>Subtotal</span><span class="mono">${money(t.sub)}</span>
       <span>Delivery</span><span class="mono">${money(t.fee)}</span>
-      ${t.disc ? `<span class="disc">Deal ${esc(t.deal)}</span><span class="mono disc">−${money(t.disc)}</span>` : ''}
+      ${t.disc ? `<span class="disc">${esc(t.deal)}</span><span class="mono disc">−${money(t.disc)}</span>` : ''}
       <span class="grand">Total</span><span class="grand mono">${money(t.total)}</span>
     </div>
     <form class="panel stack" data-form="checkout">
@@ -504,13 +536,13 @@ function vTrack(o) {
     </div>`}
     <div class="panel"><div class="panel-h"><h3>Messages with ${esc(S.settings.shop)}</h3></div>${vThread(o, 'customer', 'customer')}</div>
     <div class="panel stack"><h3>Your order</h3>
-      <div class="lines">${o.items.map(i => `<div class="line"><span class="mono muted">${i.qty}×</span><span class="nm">${esc(i.name)}</span><span class="mono">${money(i.price * i.qty)}</span></div>`).join('')}</div>
+      <div class="lines">${o.items.map(i => `<div class="line"><span class="mono muted">${i.qty}×</span><span class="nm">${iname(i)}</span><span class="mono">${money(i.price * i.qty)}</span></div>`).join('')}</div>
       ${vTotals(o)}
       <p class="muted small">Delivering to ${esc(o.customer.address)}</p>
     </div>
   </div>`;
 }
-const vTotals = o => `<div class="totals"><span>Subtotal</span><span class="mono">${money(o.sub)}</span><span>Delivery</span><span class="mono">${money(o.fee)}</span>${o.disc ? `<span class="disc">Deal ${esc(o.deal)}</span><span class="mono disc">−${money(o.disc)}</span>` : ''}<span class="grand">Total</span><span class="grand mono">${money(o.total)}</span></div>`;
+const vTotals = o => `<div class="totals"><span>Subtotal</span><span class="mono">${money(o.sub)}</span><span>Delivery</span><span class="mono">${money(o.fee)}</span>${o.disc ? `<span class="disc">${esc(o.deal)}</span><span class="mono disc">−${money(o.disc)}</span>` : ''}<span class="grand">Total</span><span class="grand mono">${money(o.total)}</span></div>`;
 
 function vThread(o, thread, me) {
   const who = m => m.from === 'customer' ? o.customer.name : m.from === 'shop' ? S.settings.shop : (driver(o.driverId)?.name || 'Driver');
@@ -544,9 +576,9 @@ function vTicket(o) {
     <div class="t-top"><div class="row" style="gap:8px"><span class="t-no">#${o.no}</span><span class="muted small" data-ago="${o.at}">${ago(o.at)}</span><span class="spacer"></span>${pill(o.status)}</div>
       <div><strong>${esc(o.customer.name)}</strong></div><div class="muted small ic">${ICON.pin}${esc(o.customer.address)}</div></div>
     <div class="tear"></div>
-    <div class="t-items">${shown.map(i => `<div><span class="q">${i.qty}×</span>${esc(i.name)}</div>`).join('')}${o.items.length > 4 ? `<div class="muted">+${o.items.length - 4} more</div>` : ''}
+    <div class="t-items">${shown.map(i => `<div><span class="q">${i.qty}×</span>${esc(i.name)}${i.contents ? `<div class="muted small" style="padding-left:24px">${esc(i.contents)}</div>` : ''}</div>`).join('')}${o.items.length > 4 ? `<div class="muted">+${o.items.length - 4} more</div>` : ''}
       ${o.customer.note ? `<div class="muted small" style="margin-top:4px">“${esc(o.customer.note)}”</div>` : ''}</div>
-    <div class="t-foot">${d ? `<span class="ic">${ICON.car}${esc(d.name)}${o.eta && ['accepted','picked'].includes(o.status) ? ' · ' + hhmm(o.eta) : ''}</span>` : ''}${o.deal ? `<span class="tag">${esc(o.deal)}</span>` : ''}${msgs ? `<span class="ic">${ICON.chat}${msgs}</span>` : ''}<span class="tot">${money(o.total)}</span></div>
+    <div class="t-foot">${d ? `<span class="ic">${ICON.car}${esc(d.name)}${o.eta && ['accepted','picked'].includes(o.status) ? ' · ' + hhmm(o.eta) : ''}</span>` : ''}${o.deal ? `<span class="tag">${esc(o.deal)}</span>` : ''}${o.items.some(i => i.bundle) ? '<span class="tag">Meal deal</span>' : ''}${msgs ? `<span class="ic">${ICON.chat}${msgs}</span>` : ''}<span class="tot">${money(o.total)}</span></div>
   </article>`;
 }
 function vOrderSheet(o) {
@@ -556,7 +588,7 @@ function vOrderSheet(o) {
   return `<div class="sheet-bg" data-act="close"><div class="sheet" data-act="noop" role="dialog" aria-label="Order ${o.no}">
     <div class="sheet-h"><span class="t-no">#${o.no}</span>${pill(o.status)}<span class="spacer"></span><button class="x" data-act="close" aria-label="Close">${ICON.x}</button></div>
     <div class="panel"><dl class="kv"><dt>Customer</dt><dd><strong>${esc(o.customer.name)}</strong></dd><dt>Phone</dt><dd class="mono">${esc(o.customer.phone)}</dd><dt>Address</dt><dd>${esc(o.customer.address)}</dd><dt>Placed</dt><dd>${hhmm(o.at)} · ${ago(o.at)}</dd>${o.customer.note ? `<dt>Comment</dt><dd>“${esc(o.customer.note)}”</dd>` : ''}</dl></div>
-    <div class="panel stack"><div class="lines">${o.items.map(i => `<div class="line"><span class="mono muted">${i.qty}×</span><span class="nm">${esc(i.name)}</span><span class="mono">${money(i.price * i.qty)}</span></div>`).join('')}</div>${vTotals(o)}</div>
+    <div class="panel stack"><div class="lines">${o.items.map(i => `<div class="line"><span class="mono muted">${i.qty}×</span><span class="nm">${iname(i)}</span><span class="mono">${money(i.price * i.qty)}</span></div>`).join('')}</div>${vTotals(o)}</div>
 
     ${o.status === 'new' ? `<form class="panel stack" data-form="dispatch" data-id="${o.id}"><h3>Send ticket to a driver</h3>
       ${onDuty.length ? `<label class="f">Driver<select id="drv-${o.id}" name="driver">${onDuty.map(x => `<option value="${x.id}">${esc(x.name)} · ${S.orders.filter(q => q.driverId === x.id && ['sent','accepted','picked'].includes(q.status)).length} active</option>`).join('')}</select></label>
@@ -589,25 +621,40 @@ function vMenu() {
     <label class="f">Description<input id="ma-desc" name="desc"></label>
     <div><button class="btn primary">Add to menu</button></div></form>`;
 }
+const KIND = {bundle:'Meal deal', spend:'Spend deal', code:'Promo code'};
+const KINDS = {bundle:'Meal deals', spend:'Spend deals', code:'Promo codes'};
+const KHELP = {bundle:'Pick items and set one price. Shows at the top of the menu with an Add button.',
+  spend:'Customers who spend enough get money off. Applied automatically, no code needed.',
+  code:'A code you give out yourself. Customers type it in their basket.'};
 function vDeals() {
-  const used = code => S.orders.filter(o => o.deal === code && o.status !== 'cancelled');
-  return `<div class="panel-h"><h2>Deals</h2><span class="spacer"></span><button class="btn primary" data-act="randomdeal">Drop a random flash deal</button></div>
-  ${ui.flash ? `<div class="panel" style="background:var(--accent-soft);border-color:transparent;margin-bottom:14px">Live now: <span class="tag">${esc(ui.flash)}</span> Send this code to customers.</div>` : ''}
-  <div class="cards">${S.deals.map(d => { const u = used(d.code); return `<div class="card">
-    <div class="row"><span class="tag">${esc(d.code)}</span>${d.mystery ? '<span class="tag plain">Mystery pool</span>' : ''}<span class="spacer"></span><button class="toggle" data-act="dealtoggle" data-id="${d.id}" aria-pressed="${d.active}" aria-label="${esc(d.code)} active"></button></div>
-    <strong>${esc(dealText(d))}</strong>
-    <div class="muted small">${d.expires ? (d.expires > now() ? 'Ends ' + hhmm(d.expires) + ' · ' + new Date(d.expires).toLocaleDateString([], {day:'numeric', month:'short'}) : 'Expired') : 'No end date'} · used ${u.length}× · cost ${money(u.reduce((a, o) => a + o.disc, 0))}</div>
-    <div><button class="btn sm ghost danger" data-act="dealdel" data-id="${d.id}">Delete</button></div></div>`; }).join('')}</div>
-  <form class="panel stack" data-form="dealadd" style="margin-top:16px"><h3>Create a deal</h3>
-    <div class="grid2">
-      <label class="f">Code<input id="da-code" name="code" required placeholder="SUMMER20" style="text-transform:uppercase"></label>
-      <label class="f">Type<select id="da-type" name="type"><option value="percent">% off</option><option value="fixed">Amount off</option><option value="freedelivery">Free delivery</option></select></label>
-      <label class="f">Value<input id="da-val" name="value" type="number" min="0" step="0.5" placeholder="20"></label>
-      <label class="f">Minimum spend<input id="da-min" name="min" type="number" min="0" step="0.5" placeholder="0"></label>
-      <label class="f">Ends in (hours, optional)<input id="da-exp" name="exp" type="number" min="0" step="1"></label>
-    </div>
-    <label class="row small" style="font-weight:600"><input id="da-myst" name="mystery" type="checkbox" style="width:auto"> Put in the mystery spin pool (hidden code, customers win it at random)</label>
-    <div><button class="btn primary">Create deal</button></div></form>`;
+  const live = S.orders.filter(o => o.status !== 'cancelled');
+  const stats = d => {
+    if (d.kind === 'bundle') { let n = 0, sv = 0; live.forEach(o => o.items.forEach(i => { if (i.id === 'b:' + d.id) { n += i.qty; sv += (i.save || 0) * i.qty; } })); return [n, sv]; }
+    const l = live.filter(o => o.dealId === d.id); return [l.length, l.reduce((a, o) => a + o.disc, 0)];
+  };
+  const card = d => { const [n, sv] = stats(d), on = dealLive(d); return `<div class="card">
+    <div class="row"><span class="pill ${on ? 's-delivered' : 's-cancelled'}">${on ? 'Live' : d.active ? 'Ended' : 'Off'}</span><span class="spacer"></span><button class="toggle" data-act="dealtoggle" data-id="${d.id}" aria-pressed="${d.active}" aria-label="${esc(dealTitle(d))} on"></button></div>
+    <strong style="font-size:16px">${d.kind === 'code' ? `<span class="tag">${esc(d.code)}</span>` : esc(dealTitle(d))}</strong>
+    <div class="small">${esc(dealDetail(d))}${d.kind === 'bundle' ? ` <span class="muted">(normally ${money(regular(d))})</span>` : ''}</div>
+    ${d.kind === 'bundle' && d.price >= regular(d) ? '<div class="err">This costs the same or more than buying the items separately.</div>' : ''}
+    <div class="muted small">${d.expires ? (d.expires > now() ? 'Ends ' + hhmm(d.expires) + ', ' + new Date(d.expires).toLocaleDateString([], {day:'numeric', month:'short'}) : 'Ended') : 'Runs until you turn it off'} · used ${n}× · customers saved ${money(sv)}</div>
+    <div><button class="btn sm ghost danger" data-act="dealdel" data-id="${d.id}">Delete</button></div></div>`; };
+  const k = ui.dealKind;
+  const rewardFields = `<label class="f">Reward<select id="da-type" name="type"><option value="fixed">Amount off (${esc(S.settings.currency)})</option><option value="percent">% off</option><option value="freedelivery">Free delivery</option></select></label>
+      <label class="f">Amount off<input id="da-val" name="value" type="number" min="0" step="0.5" placeholder="5"></label>`;
+  const exp = `<label class="f">Ends in (hours, optional)<input id="da-exp" name="exp" type="number" min="0" step="1" placeholder="No end"></label>`;
+  return `<div class="panel-h"><h2>Deals</h2><span class="spacer"></span><span class="muted small">Switch any deal on or off whenever you like. Customers see it straight away.</span></div>
+  <div class="stack" style="gap:18px">
+  ${Object.keys(KINDS).map(kind => { const list = S.deals.filter(d => d.kind === kind); return list.length ? `<div><h3 style="margin-bottom:8px">${KINDS[kind]}</h3><div class="cards">${list.map(card).join('')}</div></div>` : ''; }).join('')}
+  <form class="panel stack" data-form="dealadd"><h3>Create a deal</h3>
+    <div class="seg" role="group" aria-label="Deal type">${Object.entries(KIND).map(([v, l]) => `<button type="button" data-act="dealkind" data-v="${v}" aria-pressed="${k === v}">${l}</button>`).join('')}</div>
+    <p class="muted small">${KHELP[k]}</p>
+    ${k === 'bundle' ? `<div class="grid2"><label class="f">Deal name<input id="da-name" name="name" placeholder="Family feast"></label><label class="f">Deal price<input id="da-price" name="price" type="number" min="0" step="0.05" placeholder="25"></label>${exp}</div>
+      <div class="stack" style="gap:8px"><span class="eyebrow">How many of each item</span><div class="pick">${S.menu.map(m => `<label class="pickrow"><span>${esc(m.name)} <span class="muted mono small">${money(m.price)}</span></span><input id="bq-${m.id}" name="q_${m.id}" type="number" min="0" step="1" placeholder="0" aria-label="How many ${esc(m.name)}"></label>`).join('')}</div></div>`
+    : k === 'spend' ? `<div class="grid2"><label class="f">Customer spends at least<input id="da-min" name="min" type="number" min="0" step="0.5" placeholder="30"></label>${rewardFields}${exp}</div>`
+    : `<div class="grid2"><label class="f">Code<input id="da-code" name="code" placeholder="SUMMER20" style="text-transform:uppercase"></label>${rewardFields}<label class="f">Minimum spend (optional)<input id="da-min" name="min" type="number" min="0" step="0.5" placeholder="0"></label>${exp}</div>`}
+    <div><button class="btn primary">Create and switch on</button></div></form>
+  </div>`;
 }
 function vDrivers() {
   return `<div class="panel-h"><h2>Drivers</h2></div>
@@ -629,7 +676,8 @@ function vAccounts() {
   const days = {}; done.forEach(o => { (days[dayKey(o.at)] ||= []).push(o); });
   const dRows = Object.keys(days).sort().reverse();
   const byDrv = S.drivers.map(d => ({d, list:done.filter(o => o.driverId === d.id)})).filter(x => x.list.length);
-  const byDeal = {}; done.filter(o => o.deal).forEach(o => { (byDeal[o.deal] ||= []).push(o); });
+  const byDeal = {}; const addDeal = (k, n, sv) => { const r = byDeal[k] ||= {n:0, sv:0}; r.n += n; r.sv += sv; };
+  done.forEach(o => { if (o.deal && o.disc) addDeal(o.deal, 1, o.disc); o.items.forEach(i => { if (i.bundle) addDeal(i.name, i.qty, (i.save || 0) * i.qty); }); });
   const cancelled = S.orders.filter(o => o.status === 'cancelled' && o.at >= from).length;
   return `<div class="panel-h"><h2>Accounts</h2><span class="spacer"></span><div class="seg">${Object.entries(ranges).map(([k, [l]]) => `<button data-act="acct" data-v="${k}" aria-pressed="${ui.acct === k}">${l}</button>`).join('')}</div></div>
   <div class="kpis">
@@ -647,7 +695,7 @@ function vAccounts() {
   </tbody></table></div></div>
   <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
     <div><h3 style="margin-bottom:8px">Deliveries by driver</h3><div class="tbl"><table><thead><tr><th>Driver</th><th class="num">Deliveries</th><th class="num">Order value</th></tr></thead><tbody>${byDrv.length ? byDrv.map(x => `<tr><td>${esc(x.d.name)}</td><td class="num">${x.list.length}</td><td class="num">${money(sum(x.list, 'total'))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">None yet.</td></tr>'}</tbody></table></div></div>
-    <div><h3 style="margin-bottom:8px">Deals used</h3><div class="tbl"><table><thead><tr><th>Code</th><th class="num">Uses</th><th class="num">Cost</th></tr></thead><tbody>${Object.keys(byDeal).length ? Object.entries(byDeal).map(([c, l]) => `<tr><td class="mono">${esc(c)}</td><td class="num">${l.length}</td><td class="num">${money(sum(l, 'disc'))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">No deals used.</td></tr>'}</tbody></table></div></div>
+    <div><h3 style="margin-bottom:8px">Deals used</h3><div class="tbl"><table><thead><tr><th>Deal</th><th class="num">Uses</th><th class="num">Customers saved</th></tr></thead><tbody>${Object.keys(byDeal).length ? Object.entries(byDeal).sort((a, b) => b[1].n - a[1].n).map(([c, r]) => `<tr><td>${esc(c)}</td><td class="num">${r.n}</td><td class="num">${money(r.sv)}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">No deals used.</td></tr>'}</tbody></table></div></div>
   </div>
   <div class="panel stack"><div class="row"><h3>Export</h3><span class="spacer"></span><button class="btn sm" data-act="csv">${ui.csv ? 'Hide' : 'Show'} CSV</button>${ui.csv ? '<button class="btn sm primary" data-act="copycsv">Copy</button>' : ''}</div>
     ${ui.csv ? `<textarea class="csv" id="csvbox" readonly>${esc(csv(done))}</textarea><p class="muted small">Paste into Excel or Google Sheets.</p>` : '<p class="muted small">Every completed order in this period, one row each.</p>'}</div>
@@ -657,7 +705,7 @@ function dayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.get
 function csv(list) {
   const q = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
   const rows = [['order','date','time','customer','address','items','subtotal','delivery_fee','discount','deal','total','driver','eta_min']];
-  list.forEach(o => rows.push([o.no, dayKey(o.at), hhmm(o.at), o.customer.name, o.customer.address, o.items.map(i => i.qty + 'x ' + i.name).join('; '), o.sub.toFixed(2), o.fee.toFixed(2), o.disc.toFixed(2), o.deal || '', o.total.toFixed(2), driver(o.driverId)?.name || '', o.etaMin || '']));
+  list.forEach(o => rows.push([o.no, dayKey(o.at), hhmm(o.at), o.customer.name, o.customer.address, o.items.map(i => i.qty + 'x ' + i.name + (i.contents ? ' (' + i.contents + ')' : '')).join('; '), o.sub.toFixed(2), o.fee.toFixed(2), o.disc.toFixed(2), o.deal || '', o.total.toFixed(2), driver(o.driverId)?.name || '', o.etaMin || '']));
   return rows.map(r => r.map(q).join(',')).join('\n');
 }
 function vSettings() {
@@ -709,7 +757,7 @@ function vDriver() {
     ${active.length ? active.map(o => `<div class="panel stack job">
       <div class="row"><span class="t-no">#${o.no}</span>${pill(o.status)}<span class="spacer"></span><span class="small">ETA <span class="mono" data-eta="${o.id}">${etaText(o)}</span></span></div>
       <div><strong>${esc(o.customer.address)}</strong><div class="muted small">${esc(o.customer.name)} · <span class="mono">${esc(o.customer.phone)}</span></div></div>
-      <div class="small">${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(' · ')}</div>
+      <div class="small">${o.items.map(i => `${i.qty}× ${esc(i.name)}${i.contents ? ' (' + esc(i.contents) + ')' : ''}`).join(' · ')}</div>
       <div class="row"><a class="btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.customer.address)}" target="_blank" rel="noopener">${ICON.pin} Open in Maps</a>
         ${o.status === 'accepted' ? `<button class="btn" data-act="setstatus" data-v="picked" data-id="${o.id}">Picked up</button>` : ''}
         <button class="btn ok" data-act="setstatus" data-v="delivered" data-id="${o.id}">Delivered</button></div>
@@ -746,17 +794,6 @@ const ACT = {
   track: t => { ui.cv = 'track'; ui.trackId = t.dataset.id; window.scrollTo(0, 0); },
   cat: t => { document.getElementById('cat-' + t.dataset.v.replace(/\W/g, ''))?.scrollIntoView({behavior:'smooth', block:'start'}); return false; },
   dropcode: () => { ui.code = null; },
-  spin: () => {
-    const pool = S.deals.filter(d => dealLive(d) && d.mystery); if (!pool.length || ui.spinning) return false;
-    const win = pool[Math.floor(Math.random() * pool.length)];
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let n = reduce ? 0 : 14;
-    const tick = () => {
-      if (n-- > 0) { ui.spinning = pool[Math.floor(Math.random() * pool.length)].code; render(); setTimeout(tick, 70 + (14 - n) * 12); return; }
-      ui.spinning = null; ui.spun = true; ui.code = win.code; render(); toast(`You won ${dealText(win)}!`, 'Mystery deal');
-    };
-    tick(); return false;
-  },
   // moderator
   modtab: t => { ui.modTab = t.dataset.v; ui.csv = false; },
   filter: t => { ui.filter = t.dataset.v; },
@@ -770,15 +807,9 @@ const ACT = {
   setstatus: t => { const o = order(t.dataset.id); setStatus(o, t.dataset.v, L.role === 'driver' ? driver(o.driverId)?.name : 'Shop'); },
   menutoggle: t => { const m = S.menu.find(x => x.id === t.dataset.id); m.on = !m.on; },
   menudel: t => { S.menu = S.menu.filter(x => x.id !== t.dataset.id); },
-  dealtoggle: t => { const d = S.deals.find(x => x.id === t.dataset.id); d.active = !d.active; },
+  dealtoggle: t => { const d = S.deals.find(x => x.id === t.dataset.id); d.active = !d.active; if (d.active && d.expires && d.expires < now()) d.expires = null; },
+  dealkind: t => { ui.dealKind = t.dataset.v; },
   dealdel: t => { S.deals = S.deals.filter(x => x.id !== t.dataset.id); },
-  randomdeal: () => {
-    const words = ['FLASH', 'HOT', 'QUICK', 'TREAT', 'SNACK', 'LUCKY'];
-    let code; do { code = words[Math.floor(Math.random() * words.length)] + (10 + Math.floor(Math.random() * 90)); } while (S.deals.some(d => d.code === code));
-    const type = Math.random() < .7 ? 'percent' : 'fixed';
-    S.deals.unshift({id:uid('dl'), code, type, value:type === 'percent' ? 10 + 5 * Math.floor(Math.random() * 4) : 2 + Math.floor(Math.random() * 3), min:type === 'fixed' ? 10 : 0, active:true, mystery:false, expires:now() + 2 * HOUR});
-    ui.flash = code;
-  },
   drvtoggle: t => { const d = driver(t.dataset.id); d.on = !d.on; },
   viewas: t => { L.driverId = t.dataset.id; L.role = 'driver'; saveLocal(); },
   acct: t => { ui.acct = t.dataset.v; },
@@ -791,10 +822,10 @@ const ACT = {
   // driver
   decline: t => { const o = order(t.dataset.id); const d = driver(o.driverId); o.driverId = null; setStatus(o, 'new', 'Declined by ' + (d?.name || 'driver')); notify('mod', `${d?.name || 'Driver'} declined #${o.no}. Send it to someone else.`, o.id); },
 };
-const READONLY = new Set(['role','bell','note','noop','inc','dec','basket','menu','myorders','track','cat','dropcode','spin','modtab','filter','open','close','thread','askcancel','nocancel','acct','csv','copycsv','askreset','noreset','viewas']);
+const READONLY = new Set(['role','bell','note','noop','inc','dec','basket','menu','myorders','track','cat','dropcode','dealkind','modtab','filter','open','close','thread','askcancel','nocancel','acct','csv','copycsv','askreset','noreset','viewas']);
 
 const FORM = {
-  code: f => { const c = f.code.value.trim().toUpperCase(); const d = S.deals.find(x => x.code === c && !x.mystery); if (!c) return; if (!d || !dealLive(d)) { ui.codeErr = `"${c}" isn't a live code.`; } else { ui.code = c; ui.codeErr = ''; clearIds.push('promo'); } return false; },
+  code: f => { const c = f.code.value.trim().toUpperCase(); const d = S.deals.find(x => x.kind === 'code' && x.code === c); if (!c) return; if (!d || !dealLive(d)) { ui.codeErr = `"${c}" isn't a live code.`; } else { ui.code = c; ui.codeErr = ''; clearIds.push('promo'); } return false; },
   checkout: f => {
     const items = cartItems(); if (!items.length || !S.settings.open) return false;
     const c = {name:f.name.value.trim(), phone:f.phone.value.trim(), address:f.address.value.trim(), note:f.note.value.trim()};
@@ -803,7 +834,7 @@ const FORM = {
     S.orders.push(o); L.myOrders.push(o.id); saveLocal();
     notify('mod', `New order #${o.no} from ${c.name} · ${money(o.total)}`, o.id);
     notify('order:' + o.id, `Order #${o.no} received. We'll update you here.`, o.id);
-    ui.cart = {}; ui.code = null; ui.spun = false; ui.checkoutErr = ''; ui.cv = 'track'; ui.trackId = o.id;
+    ui.cart = {}; ui.code = null; ui.checkoutErr = ''; ui.cv = 'track'; ui.trackId = o.id;
     clearIds.push('c-note'); window.scrollTo(0, 0);
     toast(`Order #${o.no} placed`, 'Thank you');
   },
@@ -832,11 +863,27 @@ const FORM = {
   },
   menuadd: f => { S.menu.push({id:uid('m'), name:f.name.value.trim(), cat:f.cat.value.trim() || 'Other', price:+f.price.value || 0, desc:f.desc.value.trim(), on:true}); clearIds.push('ma-name', 'ma-price', 'ma-desc'); },
   dealadd: f => {
-    const code = f.code.value.trim().toUpperCase().replace(/\s+/g, ''); if (!code) return false;
-    if (S.deals.some(d => d.code === code)) { toast(`${code} already exists. Pick another code.`, 'Deals'); return false; }
-    const hrs = +f.exp.value;
-    S.deals.unshift({id:uid('dl'), code, type:f.type.value, value:+f.value.value || 0, min:+f.min.value || 0, active:true, mystery:f.mystery.checked, expires:hrs > 0 ? now() + hrs * HOUR : null});
-    clearIds.push('da-code', 'da-val', 'da-min', 'da-exp', 'da-myst');
+    const k = ui.dealKind, hrs = +f.exp.value, base = {id:uid('dl'), kind:k, active:true, expires:hrs > 0 ? now() + hrs * HOUR : null};
+    if (k === 'bundle') {
+      const items = S.menu.map(m => ({id:m.id, qty:parseInt(f['q_' + m.id].value, 10) || 0})).filter(x => x.qty > 0);
+      const name = f.name.value.trim(), price = +f.price.value;
+      if (!name || !(price > 0) || !items.length) { toast('Give the meal deal a name, a price and at least one item.', 'Deals'); return false; }
+      S.deals.unshift({...base, name, price, items}); clearIds.push('da-name', 'da-price', ...S.menu.map(m => 'bq-' + m.id));
+    } else {
+      const type = f.type.value, value = +f.value.value || 0, min = +f.min.value || 0;
+      if (type !== 'freedelivery' && !(value > 0)) { toast('Enter how much the deal takes off.', 'Deals'); return false; }
+      if (k === 'spend') {
+        if (!(min > 0)) { toast('Enter how much customers need to spend.', 'Deals'); return false; }
+        S.deals.unshift({...base, type, value, min});
+      } else {
+        const code = f.code.value.trim().toUpperCase().replace(/\s+/g, '');
+        if (!code) { toast('Enter a code for customers to type.', 'Deals'); return false; }
+        if (S.deals.some(d => d.code === code)) { toast(`${code} already exists. Pick another code.`, 'Deals'); return false; }
+        S.deals.unshift({...base, code, type, value, min}); clearIds.push('da-code');
+      }
+      clearIds.push('da-val', 'da-min');
+    }
+    clearIds.push('da-exp'); toast('Deal is live. Customers can see it now.', 'Deals');
   },
   drvadd: f => { S.drivers.push({id:uid('dr'), name:f.name.value.trim(), phone:f.phone.value.trim(), on:true}); clearIds.push('dra-name', 'dra-phone'); },
   settings: f => { Object.assign(S.settings, {shop:f.shop.value.trim() || 'Your Kitchen', currency:f.currency.value, deliveryFee:+f.deliveryFee.value || 0}); toast('Settings saved', 'Settings'); },
